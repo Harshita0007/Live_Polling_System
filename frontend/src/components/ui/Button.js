@@ -1,13 +1,27 @@
-
 // src/components/ui/Button.js
 import React from 'react';
 
-export function PrimaryButton({ className = "", children, disabled, onClick, ...props }) {
+export function PrimaryButton({ 
+  children, 
+  onClick, 
+  disabled = false, 
+  className = "",
+  ...props 
+}) {
   return (
     <button
-      disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center rounded-full bg-purple-600 px-6 py-2.5 text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      disabled={disabled}
+      className={`
+        bg-gradient-to-r from-purple-600 to-purple-700 
+        hover:from-purple-700 hover:to-purple-800 
+        disabled:from-gray-400 disabled:to-gray-500
+        text-white font-semibold px-8 py-3 rounded-lg 
+        transition-all duration-200 
+        disabled:cursor-not-allowed disabled:opacity-70
+        hover:shadow-lg hover:shadow-purple-500/25
+        ${className}
+      `}
       {...props}
     >
       {children}
@@ -15,11 +29,26 @@ export function PrimaryButton({ className = "", children, disabled, onClick, ...
   );
 }
 
-export function SecondaryButton({ className = "", children, onClick, ...props }) {
+export function SecondaryButton({ 
+  children, 
+  onClick, 
+  disabled = false, 
+  className = "",
+  ...props 
+}) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center rounded-full bg-gray-200 px-6 py-2.5 text-gray-900 shadow-sm transition hover:bg-gray-300 ${className}`}
+      disabled={disabled}
+      className={`
+        bg-white border border-gray-300 
+        hover:bg-gray-50 hover:border-gray-400
+        disabled:bg-gray-100 disabled:border-gray-200
+        text-gray-700 font-semibold px-8 py-3 rounded-lg 
+        transition-all duration-200 
+        disabled:cursor-not-allowed disabled:opacity-70
+        ${className}
+      `}
       {...props}
     >
       {children}

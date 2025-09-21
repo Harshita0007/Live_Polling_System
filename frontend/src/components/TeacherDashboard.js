@@ -24,10 +24,14 @@ export function TeacherDashboard({
   setOptions: setOptionsProp, 
   onBack, 
   onCreate,
+  onEndPoll,
   onNewQuestion,
   onViewHistory,
   onKickUser,
   participants = [],
+  activePoll,
+  pollResults = {},
+  timeRemaining = 0,
   currentView = 'create' // 'create' | 'active' | 'history'
 }) {
   const [question, setQuestion] = useState(initialQuestion);
@@ -101,83 +105,172 @@ export function TeacherDashboard({
   const hasCorrectAnswer = options.some(opt => opt.correct);
   const isFormValid = question.trim() && validOptions.length >= 2 && hasCorrectAnswer;
 
-  // If showing active question results (like your Figma design)
-  if (currentView === 'active') {
+  // If showing active question results
+  if (currentView === 'active' && activePoll) {
+    const pollOptions = activePoll.options || validOptions;
+    const totalVotes = Object.values(pollResults).reduce((sum, votes) => sum + votes, 0) || 1;
+    
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl">
-          {/* View Poll History Button */}
-          <div className="text-center mb-6">
+        <div className="w-full max-w-4xl">
+          {/* Header with View Poll History and End Poll buttons */}
+          <div className="flex justify-center gap-4 mb-6">
             <button 
               onClick={onViewHistory}
               className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full text-sm font-medium"
             >
               👁️ View Poll History
             </button>
+            <button 
+              onClick={onEndPoll}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full text-sm font-medium"
+            >
+              End Poll
+            </button>
           </div>
 
-          {/* Question */}
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Question</h2>
-            <div className="bg-gray-700 text-white p-4 rounded-lg">
-              <p className="font-medium">{question}</p>
-            </div>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Main Question Area - 3 columns */}
+            <div className="lg:col-span-3">
+              {/* Question Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-xl font-semibold text-gray-900">Question 1</h1>
+                <div className="flex items-center text-red-600 font-medium">
+                  <span className="mr-1">⏱️</span>
+                  <span>00:{timeRemaining < 10 ? '0' + timeRemaining : timeRemaining}</span>
+                </div>
+              </div>
 
-          {/* Results */}
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <div className="space-y-4">
-              {validOptions.map((option, index) => {
-                const percentage = Math.floor(Math.random() * 60) + 15; // Mock data
-                const isCorrect = option.correct;
-                return (
-                  <div key={option.id} className="relative">
-                    <div className="bg-gray-200 rounded-lg overflow-hidden h-12">
-                      <div 
-                        className={`h-full flex items-center transition-all duration-500 ${
-                          isCorrect ? 'bg-green-500' : 'bg-purple-600'
-                        }`}
-                        style={{width: `${percentage}%`}}
-                      >
-                        <div className="absolute left-0 w-full h-full flex items-center justify-between px-4">
-                          <div className="flex items-center gap-3 text-white">
-                            <span className="flex items-center justify-center h-6 w-6 bg-white text-gray-800 text-xs font-bold rounded-full">
-                              {String.fromCharCode(65 + index)}
-                            </span>
-                            <span className="font-medium">{option.text}</span>
+              {/* Question Box */}
+              <div className="bg-gray-700 text-white p-4 rounded-t-lg mb-0">
+                <p className="font-medium">{activePoll.question}</p>
+              </div>
+
+              {/* Real-time Results */}
+              <div className="bg-white border-2 border-gray-200 rounded-b-lg p-6 mb-6">
+                <div className="space-y-4">
+                  {pollOptions.map((option, index) => {
+                    const optionKey = option.text || option.id || option;
+                    const votes = pollResults[optionKey] || 0;
+                    const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                    const isCorrect = option.correct;
+                    
+                    return (
+                      <div key={option.id || index} className="relative">
+                        <div className="bg-gray-200 rounded-lg overflow-hidden h-14">
+                          <div 
+                            className={`h-full flex items-center transition-all duration-500 ${
+                              isCorrect ? 'bg-green-500' : 'bg-purple-600'
+                            }`}
+                            style={{width: `${percentage}%`}}
+                          >
+                            <div className="absolute left-0 w-full h-full flex items-center justify-between px-4">
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center justify-center h-8 w-8 bg-white text-gray-800 text-sm font-bold rounded-full">
+                                  {String.fromCharCode(65 + index)}
+                                </span>
+                                <span className="font-medium text-gray-800">{option.text}</span>
+                                {isCorrect && (
+                                  <span className="ml-2 text-green-600 font-semibold">✓ Correct</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-800 font-bold text-lg">{percentage}%</span>
+                                <span className="text-gray-600 text-sm">({votes} votes)</span>
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-white font-semibold">{percentage}%</span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Live Stats */}
+                <div className="mt-6 text-center">
+                  <p className="text-gray-600 text-sm">
+                    Total Responses: {totalVotes} / {participants.filter(p => p.role === 'student').length} students
+                  </p>
+                </div>
+              </div>
 
-          {/* Action Button */}
-          <div className="text-center">
-            <button 
-              onClick={onNewQuestion}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-full font-medium"
-            >
-              + Ask a new question
-            </button>
+              {/* Action Button */}
+              <div className="text-center">
+                <button 
+                  onClick={onNewQuestion}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-full font-medium"
+                >
+                  + Ask a new question
+                </button>
+              </div>
+            </div>
+
+            {/* Sidebar - 1 column */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="text-center mb-6">
+                  <div className="text-2xl font-bold text-purple-600 mb-2">
+                    {totalVotes}
+                  </div>
+                  <p className="text-gray-500 text-sm">Total Responses</p>
+                </div>
+                
+                {/* Participants Section */}
+                <div className="border-t pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-gray-600">👥</span>
+                    <h4 className="font-semibold text-gray-800">
+                      Participants ({participants.length})
+                    </h4>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {participants.length > 0 ? (
+                      participants.map((participant, index) => (
+                        <div key={participant.id || index} className="flex items-center justify-between py-2">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${
+                              participant.role === 'teacher' ? 'bg-green-500' : 'bg-purple-500'
+                            }`}></div>
+                            <span className="text-sm text-gray-700 font-medium">
+                              {participant.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">
+                              {participant.role === 'teacher' ? '👨‍🏫' : 'Kick Out'}
+                            </span>
+                            {participant.role === 'student' && onKickUser && (
+                              <button
+                                onClick={() => onKickUser(participant.id)}
+                                className="text-red-500 hover:text-red-700 text-xs px-2 py-1 hover:bg-red-50 rounded"
+                              >
+                                Kick
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm">No participants yet</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Create poll view
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header matching exact Figma design */}
+        {/* Header */}
         <div className="mb-8">
-          <div className="inline-flex items-center bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
-            ← Interval Poll
-          </div>
+          
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Let's Get Started</h1>
           <p className="text-gray-600 max-w-2xl">
             You'll have the ability to create and manage polls, ask questions, and monitor your students' responses in real-time.

@@ -1,4 +1,4 @@
-// src/App.js - Main Application with Socket Integration
+// src/App.js - Complete Fixed Version
 import React, { useState, useEffect } from 'react';
 import { BrandPill } from './components/ui/BrandPill';
 import { RoleSelection } from './components/RoleSelection';
@@ -21,7 +21,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('roleSelection');
   const [selectedRole, setSelectedRole] = useState(null);
   const [studentName, setStudentName] = useState('');
-  const [roomId, setRoomId] = useState('default-room'); // You can make this dynamic
+  const [roomId, setRoomId] = useState('default-room');
   const [userId, setUserId] = useState(generateId());
   
   // Connection state
@@ -58,7 +58,7 @@ export default function App() {
     console.log('Initializing socket connection...');
     const socket = socketService.connect();
     
-    // Connection event listeners with debug logs
+    // Connection event listeners
     socketService.on('connect', () => {
       setIsConnected(true);
       setConnectionError(null);
@@ -75,7 +75,7 @@ export default function App() {
       console.error('CONNECTION ERROR:', error);
     });
 
-    // Poll event listeners with detailed logging
+    // Poll event listeners
     socketService.on('poll_created', (pollData) => {
       console.log('POLL RECEIVED by client:', pollData);
       console.log('Current user role:', selectedRole);
@@ -83,6 +83,7 @@ export default function App() {
       
       setActivePoll(pollData);
       setTimeRemaining(pollData.timeLimit);
+      setPollResults({}); // Reset results
       
       if (selectedRole === 'student') {
         console.log('Setting student view to studentQuestion');
@@ -94,9 +95,11 @@ export default function App() {
 
     socketService.on('poll_ended', (pollData) => {
       console.log('Poll ended:', pollData);
-      if (activePoll) {
-        setPollHistory(prev => [pollData, ...prev]);
-      }
+      
+      // Always add to history regardless of current activePoll state
+      setPollHistory(prev => [pollData, ...prev]);
+      
+      // Clear poll state
       setActivePoll(null);
       setHasSubmitted(false);
       setSelectedAnswer(null);
@@ -112,7 +115,9 @@ export default function App() {
     socketService.on('poll_results', (results) => {
       console.log('Poll results received:', results);
       setPollResults(results);
-      if (selectedRole === 'student') {
+      
+      // If student and has submitted, show results
+      if (selectedRole === 'student' && hasSubmitted) {
         setCurrentView('pollResults');
       }
     });
@@ -158,17 +163,7 @@ export default function App() {
     return () => {
       socketService.disconnect();
     };
-  }, [selectedRole]); // Add selectedRole as dependency
-
-  // Timer effect (local countdown)
-  useEffect(() => {
-    if (timeRemaining > 0 && activePoll) {
-      const timer = setTimeout(() => {
-        setTimeRemaining(timeRemaining - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [timeRemaining, activePoll]);
+  }, [selectedRole, hasSubmitted]); // Add hasSubmitted to dependencies
 
   const handleRoleSelect = (role) => {
     console.log('Role selected:', role);
@@ -178,7 +173,6 @@ export default function App() {
   const handleContinueFromRole = () => {
     if (selectedRole === 'teacher') {
       console.log('Navigating to teacher dashboard');
-      // Teacher joins room immediately
       const teacherData = {
         id: userId,
         name: 'Teacher',
@@ -201,7 +195,6 @@ export default function App() {
       };
       
       console.log('Student joining room:', roomId, 'with data:', userData);
-      // Join room via socket
       socketService.joinRoom(roomId, userData);
       setCurrentView('waitingScreen');
     }
@@ -223,7 +216,6 @@ export default function App() {
     console.log('Room ID:', roomId);
     console.log('Socket connected:', isConnected);
     
-    // Create poll via socket
     socketService.createPoll(poll);
     setCurrentView('activeQuestion');
   };
@@ -233,6 +225,13 @@ export default function App() {
       console.log('Submitting answer:', selectedAnswer);
       socketService.submitAnswer(activePoll.id, selectedAnswer);
       setHasSubmitted(true);
+      
+      // Show results immediately after submission
+      setTimeout(() => {
+        if (Object.keys(pollResults).length > 0) {
+          setCurrentView('pollResults');
+        }
+      }, 500);
     }
   };
 
@@ -244,7 +243,6 @@ export default function App() {
   };
 
   const handleNewQuestion = () => {
-    // Reset form
     setActivePoll(null);
     setSelectedAnswer(null);
     setHasSubmitted(false);
@@ -257,7 +255,6 @@ export default function App() {
     setCurrentView('teacherDashboard');
   };
 
-  // Chat functions
   const handleSendMessage = () => {
     if (chatText.trim()) {
       const messageData = {
@@ -422,7 +419,9 @@ export default function App() {
           <div>Role: {selectedRole}</div>
           <div>Room: {roomId}</div>
           <div>Connected: {isConnected ? 'Yes' : 'No'}</div>
-          <div>Poll: {activePoll ? 'Active' : 'None'}</div>
+          <div>Poll: {activePoll ? activePoll.question.substring(0, 20) + '...' : 'None'}</div>
+          <div>Results: {Object.keys(pollResults).length} options</div>
+          <div>Submitted: {hasSubmitted ? 'Yes' : 'No'}</div>
         </div>
       )}
       
@@ -431,7 +430,7 @@ export default function App() {
         {renderCurrentView()}
       </main>
       
-      {/* ChatDock Component - Available in student views */}
+      {/* ChatDock Component */}
       {selectedRole === 'student' && ['waitingScreen', 'studentQuestion', 'pollResults'].includes(currentView) && (
         <ChatDock
           open={isChatOpen}

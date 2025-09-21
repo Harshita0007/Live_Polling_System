@@ -150,9 +150,7 @@ export function StudentOnboarding({ name, setName, onBack, onContinue }) {
       <div className="student-onboarding-container">
         <div className="student-onboarding-content">
           {/* Header Badge */}
-          <div className="brand-pill">
-            ← Interval Poll
-          </div>
+          
           
           {/* Main Heading */}
           <h1 className="main-heading">

@@ -11,7 +11,7 @@ export function PollHistory({ polls, onBack }) {
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="inline-flex items-center bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
-              ← Interval Poll
+              ← Intervue Poll Poll
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Poll History</h1>
             <p className="text-gray-600 text-sm mt-1">
